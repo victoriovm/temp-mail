@@ -27,7 +27,7 @@ app.post("/api/receive", authMiddleware, async (req, res) => {
     }
     email = email.split("@")[0].toLowerCase();
     const messageId = uuidv4();
-    message.text = Buffer.from(message.text).toString('base64');
+    message.text = Buffer.from(message.text).toString('ascii');
     const messageWithId = { id: messageId, content: message };
 
     await redis.lpush(email, JSON.stringify(messageWithId));
@@ -44,7 +44,7 @@ app.post("/api/list", async (req, res) => {
     const emails = await redis.lrange(email, 0, -1);
     const messageIds = emails.map(msg => {
         const parsed = JSON.parse(msg);
-        return { id: parsed.id };
+        return { id: parsed.id, title: parsed.content.subject };
     });
 
     res.json({ messages: messageIds });

@@ -1,0 +1,111 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 14% 5%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 14% 5%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 14% 5%;
+
+    --primary: 220 14% 5%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 20% 98%;
+    --secondary-foreground: 220 14% 5%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 220 8% 46%;
+
+    --accent: 210 20% 96%;
+    --accent-foreground: 220 14% 5%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 71% 45%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 220 14% 5%;
+    --foreground: 210 20% 98%;
+
+    --card: 220 14% 7%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 220 14% 5%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 210 20% 98%;
+    --primary-foreground: 220 14% 5%;
+
+    --secondary: 225 13% 13%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 225 13% 13%;
+    --muted-foreground: 220 14% 65%;
+
+    --accent: 225 13% 13%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 225 13% 15%;
+    --input: 225 13% 15%;
+    --ring: 224 76% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Smooth transitions for theme changes */
+  body, button, input, textarea, a {
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-in-out;
+}

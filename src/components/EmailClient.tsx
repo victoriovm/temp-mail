@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const AVAILABLE_DOMAINS = (import.meta.env.EMAIL_DOMAINS || "tempmail.com,mailtemp.app,disposable.site").split(",");
+const AVAILABLE_DOMAINS = (import.meta.env.VITE_EMAIL_DOMAINS || "tempmail.com,mailtemp.app,disposable.site").split(",");
 
 function generateRandomEmail() {
   const randomStr = Math.random().toString(36).substring(2, 10);

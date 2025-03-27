@@ -3,9 +3,11 @@ import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
 import { configDotenv } from "dotenv";
 import serverless from "serverless-http";
+import cors from "cors";
 
 const app = express();
 app.use(json());
+app.use(cors());
 configDotenv();
 
 const AUTH_TOKEN = process.env.SECRET_KEY;
@@ -27,7 +29,7 @@ app.post("/api/receive", authMiddleware, async (req, res) => {
     }
     email = email.split("@")[0].toLowerCase();
     const messageId = uuidv4();
-    message.text = Buffer.from(message.text).toString('ascii');
+    message.text = Buffer.from(message.text, 'base64').toString('ascii');
     const messageWithId = { id: messageId, content: message };
 
     await redis.lpush(email, JSON.stringify(messageWithId));

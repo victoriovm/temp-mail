@@ -12,6 +12,11 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import {
+  adjectives,
+  animals,
+  uniqueNamesGenerator,
+} from "unique-names-generator"
 
 import { MailReadingPane } from "@/components/mail-reading-pane"
 import { Button } from "@/components/ui/button"
@@ -41,31 +46,9 @@ const MAIL_DOMAINS = getMailDomains()
 
 const MAILBOX_STORAGE_KEY = "temp-mail:mailbox"
 const DOMAIN_STORAGE_KEY = "temp-mail:domain"
-
-const adjectives = [
-  "calmo",
-  "claro",
-  "feliz",
-  "leve",
-  "livre",
-  "lunar",
-  "rapido",
-  "secreto",
-  "solar",
-]
-
-const nouns = [
-  "atlas",
-  "cometa",
-  "falcon",
-  "lince",
-  "nuvem",
-  "panda",
-  "pixel",
-  "rio",
-  "vento",
-  "zen",
-]
+const mailboxNumbers = Array.from({ length: 9000 }, (_, index) =>
+  String(index + 100),
+)
 
 function randomIndex(max: number) {
   if (typeof crypto !== "undefined" && crypto.getRandomValues) {
@@ -78,7 +61,18 @@ function randomIndex(max: number) {
 }
 
 function createMailboxName() {
-  return `${adjectives[randomIndex(adjectives.length)]}-${nouns[randomIndex(nouns.length)]}-${randomIndex(900) + 100}`
+  const seed =
+    typeof crypto !== "undefined" && crypto.getRandomValues
+      ? crypto.getRandomValues(new Uint32Array(1))[0]
+      : Date.now() + Math.floor(Math.random() * 1_000_000)
+
+  return uniqueNamesGenerator({
+    dictionaries: [adjectives, animals, mailboxNumbers],
+    length: 3,
+    seed,
+    separator: "-",
+    style: "lowerCase",
+  })
 }
 
 function randomDomain(current?: string) {

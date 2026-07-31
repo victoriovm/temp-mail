@@ -1,5 +1,5 @@
 {
-  "name": "temp-mail",
+  "name": "@victoriovm/temp-mail",
   "module": "src/index.ts",
   "type": "module",
   "devDependencies": {

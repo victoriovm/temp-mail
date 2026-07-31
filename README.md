@@ -1,69 +1,120 @@
-# ✉ Temp Mail
+# 📬 Temp Mail
 
-A self-hosted disposable email api that uses Cloudflare Worker.
+Serviço simples de e-mail temporário feito com Next.js.
 
-## Cloudflare Worker Config
+## 🚀 Instalação
 
-This is the Cloudflare Worker configuration to forward emails (with Catch-All) from your domain to the API:
+Requer Node.js 20.9 ou superior.
+
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Acesse `http://localhost:3000`.
+
+## ⚙️ Variáveis de ambiente
+
+```env
+# Protege o recebimento e libera o painel em /SEU_SECRET_KEY
+SECRET_KEY=sua-chave-segura
+
+# Opcional em desenvolvimento
+REDIS_SERVER=redis://localhost:6379
+
+# Domínios separados por vírgula
+NEXT_PUBLIC_MAIL_DOMAINS=example.com,example.net
+```
+
+Sem `REDIS_SERVER`, as mensagens ficam apenas na memória e são perdidas ao
+reiniciar o servidor.
+
+## ☁️ Cloudflare Email Worker
+
+Substitua `SEU_DOMINIO` pela URL do servidor e `SEU_SECRET_KEY` pelo mesmo valor
+configurado no projeto.
 
 ```js
-import PostalMime from 'postal-mime';
+const MAX_EMAIL_SIZE = 10 * 1024 * 1024;
 
 export default {
-  async email(message, env, ctx) {
-    const API_URL = "https://YOUR_API/api/receive";
-    const AUTH_TOKEN = "YOUR_TOKEN";
+  async email(message) {
+    if (message.rawSize > MAX_EMAIL_SIZE) {
+      return;
+    }
 
-    const to = message.to;
-    const from = message.from;
-    const subject = message.headers.get("subject") || "Sem assunto";
-    const emailParsed = await PostalMime.parse(message.raw);
-
-    const payload = {
-      email: to,
-      message: {
-        from,
-        subject,
-        text: btoa(unescape(encodeURIComponent(emailParsed.html)))
-      }
-    };
-
-    await fetch(API_URL, {
+    await fetch('https://SEU_DOMINIO/api/receive', {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${AUTH_TOKEN}`
+        "authorization": "Bearer SEU_SECRET_KEY",
+        "Content-Type": "message/rfc822",
+        "X-Envelope-To": message.to,
+        "X-Envelope-From": message.from
       },
-      body: JSON.stringify(payload)
+      body: await new Response(message.raw).text(),
+      redirect: "manual"
     });
   }
 };
 ```
 
-## API Routes
+No Cloudflare, configure o Email Routing para encaminhar as mensagens para esse
+Worker.
 
-### Receive Email
+## 🔌 API
 
-`POST /api/receive`
+### 📥 Receber e-mail
 
-Requires authentication - Header: Authorization: Bearer YOUR_SECRET_TOKEN
-
-### List Mails
-
-`POST /api/list`
-
-```json
-{
-  "email": "user_mail"
-}
+```http
+POST /api/receive
+Authorization: Bearer SEU_SECRET_KEY
+Content-Type: message/rfc822
+X-Envelope-To: caixa@example.com
 ```
 
-### Read Mail
-`POST /api/read`
+O corpo deve conter o e-mail completo em formato MIME/RFC822. O formato JSON
+antigo continua compatível.
+
+### 📋 Listar mensagens
+
+```http
+POST /api/list
+Content-Type: application/json
+
+{ "email": "caixa@example.com" }
+```
+
+### ✉️ Ler mensagem
+
+```http
+POST /api/read
+Content-Type: application/json
+
+{ "email": "caixa@example.com", "id": "ID_DA_MENSAGEM" }
+```
+
+### 🌐 Listar domínios
+
+```http
+GET /api/domains
+```
 
 ```json
-{
-  "email": "user_mail",
-  "id": "message_id"
-}
+{ "domains": ["example.com", "example.net"] }
+```
+
+## 🔐 Painel administrativo
+
+Use a mesma `SECRET_KEY` configurada na API:
+
+```text
+https://SEU_DOMINIO/SEU_SECRET_KEY
+```
+
+## 📦 Produção
+
+```bash
+npm run build
+npm start
 ```

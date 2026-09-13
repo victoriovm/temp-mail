@@ -10,6 +10,26 @@ import { formatReceivedDate } from "@/lib/mail-display"
 import { getSenderLabel, type StoredMessage } from "@/lib/mail-types"
 import { cn } from "@/lib/utils"
 
+const EMAIL_SANDBOX = "allow-popups allow-popups-to-escape-sandbox"
+
+function openEmailLinksInNewTab(html: string) {
+  if (typeof document === "undefined") return html
+
+  const template = document.createElement("template")
+  template.innerHTML = html
+
+  for (const link of template.content.querySelectorAll("a[href], area[href]")) {
+    const href = link.getAttribute("href")?.trim() ?? ""
+
+    if (!/^(?:https?:)?\/\//i.test(href)) continue
+
+    link.setAttribute("target", "_blank")
+    link.setAttribute("rel", "noopener noreferrer")
+  }
+
+  return template.innerHTML
+}
+
 function safeEmailDocument(html: string) {
   return `<!doctype html>
 <html>
@@ -39,7 +59,7 @@ function safeEmailDocument(html: string) {
       }
     </style>
   </head>
-  <body>${html}</body>
+  <body>${openEmailLinksInNewTab(html)}</body>
 </html>`
 }
 
@@ -148,7 +168,7 @@ export function MailReadingPane({
         <iframe
           title={`Mensagem: ${message.content.subject}`}
           srcDoc={htmlDocument}
-          sandbox=""
+          sandbox={EMAIL_SANDBOX}
           referrerPolicy="no-referrer"
           className="min-h-0 w-full flex-1 border-0 bg-white"
         />

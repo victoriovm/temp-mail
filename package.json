@@ -1,6 +1,6 @@
 {
   "name": "@victoriovm/temp-mail",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -13,7 +13,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "SKILL.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

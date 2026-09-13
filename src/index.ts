@@ -5,6 +5,7 @@ export interface Email {
 
 export interface TempMailOptions {
     baseUrl?: string
+    password?: string
     pollingIntervalMs?: number
     fetch?: typeof globalThis.fetch
 }
@@ -29,6 +30,8 @@ type StoredMessage = {
 
 const DEFAULT_POLLING_INTERVAL_MS = 3_000
 const USERNAME_RANDOM_BYTES = 20
+const USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{1,63}$/
+const DOMAIN_PATTERN = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value)
@@ -84,6 +87,29 @@ function validatePollingInterval(value: number | undefined) {
     return interval
 }
 
+function normalizePassword(value: string | undefined) {
+    if (value === undefined) return undefined
+
+    if (typeof value !== "string") {
+        throw new TempMailError("password must be a string.")
+    }
+
+    const password = value.trim()
+
+    return password.length > 0 ? password : undefined
+}
+
+function requestHeaders(
+    headers: HeadersInit | undefined,
+    password: string | undefined,
+) {
+    const nextHeaders = new Headers(headers)
+
+    if (password) nextHeaders.set("Authorization", `Bearer ${password}`)
+
+    return nextHeaders
+}
+
 function randomIndex(max: number) {
     const cryptoApi = globalThis.crypto
 
@@ -114,22 +140,55 @@ function createUsername() {
     return `tm-${randomId}`
 }
 
+function isValidUsername(value: string) {
+    return USERNAME_PATTERN.test(value)
+}
+
+function isValidDomain(value: string) {
+    return DOMAIN_PATTERN.test(value) && value.includes(".")
+}
+
+function normalizeUsername(value: string) {
+    const username = typeof value === "string" ? value.trim().toLowerCase() : ""
+
+    if (!isValidUsername(username)) {
+        throw new TempMailError("Invalid username.")
+    }
+
+    return username
+}
+
+function normalizeDomain(value: string) {
+    const domain =
+        typeof value === "string"
+            ? value.trim().toLowerCase().replace(/^@/, "")
+            : ""
+
+    if (!isValidDomain(domain)) {
+        throw new TempMailError("Invalid domain.")
+    }
+
+    return domain
+}
+
 function emailAddress(value: Email | string) {
     const address = (typeof value === "string" ? value : value?.email)
         ?.trim()
         .toLowerCase()
 
-    if (
-        !address ||
-        !/^[a-z0-9][a-z0-9._-]{1,63}@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(
-            address,
-        ) ||
-        !address.slice(address.indexOf("@") + 1).includes(".")
-    ) {
+    if (!address) {
         throw new TempMailError("Invalid email address.")
     }
 
-    return address
+    const separator = address.lastIndexOf("@")
+    const username = address.slice(0, separator)
+    const domain = address.slice(separator + 1)
+
+    if (separator <= 0 || !isValidUsername(username) || !isValidDomain(domain)) {
+        throw new TempMailError("Invalid email address.")
+    }
+
+    return `${username}@${domain}`
 }
 
 function mailboxKey(address: string) {
@@ -201,11 +260,13 @@ export class TempMail {
     readonly baseUrl: string
 
     private readonly fetcher: typeof globalThis.fetch
+    private readonly password: string | undefined
     private readonly pollingIntervalMs: number
     private readonly consumedMessages = new Map<string, Set<string>>()
 
     constructor(options: TempMailOptions = {}) {
         this.baseUrl = normalizeBaseUrl(options.baseUrl)
+        this.password = normalizePassword(options.password)
         this.pollingIntervalMs = validatePollingInterval(options.pollingIntervalMs)
 
         const fetcher = options.fetch ?? globalThis.fetch
@@ -218,42 +279,72 @@ export class TempMail {
         this.fetcher = fetcher
     }
 
-    async random(): Promise<Email> {
+    /**
+     * Returns the domains the server accepts.
+     */
+    async domains(): Promise<string[]> {
         const response = await this.request("/api/domains")
 
-        if (
-            !isRecord(response) ||
-            !Array.isArray(response.domains) ||
-            response.domains.length === 0
-        ) {
+        if (!isRecord(response) || !Array.isArray(response.domains)) {
             throw new TempMailError("The API did not return any valid domains.")
         }
 
         const domains = response.domains.filter(
             (domain): domain is string =>
-                typeof domain === "string" &&
-                /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(domain) &&
-                domain.includes("."),
+                typeof domain === "string" && isValidDomain(domain),
         )
 
         if (domains.length === 0) {
             throw new TempMailError("The API did not return any valid domains.")
         }
 
-        const username = createUsername()
-        const domain = domains[randomIndex(domains.length)] as string
-
-        return { username, email: `${username}@${domain}` }
+        return domains
     }
 
-    async waitForMail(
+    /**
+     * Returns a random domain from the server's list.
+     */
+    async randomDomain(): Promise<string> {
+        const domains = await this.domains()
+
+        return domains[randomIndex(domains.length)] as string
+    }
+
+    /**
+     * Builds an email from a username and a domain, without calling the API.
+     */
+    createMail(username: string, domain: string): Email {
+        const normalizedUsername = normalizeUsername(username)
+        const normalizedDomain = normalizeDomain(domain)
+
+        return {
+            username: normalizedUsername,
+            email: `${normalizedUsername}@${normalizedDomain}`,
+        }
+    }
+
+    /**
+     * Creates a random email using one of the server's domains.
+     */
+    async random(): Promise<Email> {
+        return this.createMail(createUsername(), await this.randomDomain())
+    }
+
+    /**
+     * Waits for the next unseen message and returns its text or HTML body.
+     */
+    async waitForAnyMail(
         email: Email | string,
         options: WaitOptions = {},
     ): Promise<string> {
-        return this.wait(email, undefined, options)
+        return this.pollMailbox(email, undefined, options)
     }
 
-    async waitFor(
+    /**
+     * Waits for the next unseen message whose body matches the regex and
+     * returns the matched text.
+     */
+    async waitForMailMatching(
         email: Email | string,
         regex: RegExp,
         options: WaitOptions = {},
@@ -262,10 +353,10 @@ export class TempMail {
             throw new TempMailError("regex must be a regular expression.")
         }
 
-        return this.wait(email, regex, options)
+        return this.pollMailbox(email, regex, options)
     }
 
-    private async wait(
+    private async pollMailbox(
         email: Email | string,
         regex: RegExp | undefined,
         options: WaitOptions,
@@ -362,6 +453,7 @@ export class TempMail {
         try {
             response = await this.fetcher(`${this.baseUrl}${path}`, {
                 ...init,
+                headers: requestHeaders(init?.headers, this.password),
                 cache: "no-store",
             })
         } catch (error) {

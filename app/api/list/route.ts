@@ -1,3 +1,4 @@
+import { guardPassword } from "@/lib/api-auth"
 import { apiJson, corsOptions } from "@/lib/api-response"
 import { normalizeMailbox, toSummary } from "@/lib/mail-types"
 import { listMessages } from "@/lib/mail-store"
@@ -10,6 +11,9 @@ export function OPTIONS() {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = guardPassword(request)
+  if (unauthorized) return unauthorized
+
   const body = await request.json().catch(() => null)
   const mailbox = normalizeMailbox(body?.email)
 

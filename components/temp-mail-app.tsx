@@ -29,6 +29,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { apiFetch } from "@/lib/api-client"
 import { getStoredValue } from "@/lib/browser-storage"
 import {
   formatReceivedTime,
@@ -229,7 +230,7 @@ export function TempMailApp() {
     if (!silent) setLoadingInbox(true)
 
     try {
-      const response = await fetch("/api/list", {
+      const response = await apiFetch("/api/list", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: target }),
@@ -381,7 +382,7 @@ export function TempMailApp() {
     })
 
     try {
-      const response = await fetch("/api/read", {
+      const response = await apiFetch("/api/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: mailbox, id: summary.id }),

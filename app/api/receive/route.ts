@@ -1,3 +1,4 @@
+import { hasValidPassword, hasValidSecretKey } from "@/lib/api-auth"
 import { apiJson, corsOptions } from "@/lib/api-response"
 import {
   IncomingMailError,
@@ -14,13 +15,12 @@ export function OPTIONS() {
 
 export async function POST(request: Request) {
   const secret = process.env.SECRET_KEY
-  const authorization = request.headers.get("authorization")
 
   if (!secret) {
     return apiJson({ error: "Receive endpoint is not configured!" }, 503)
   }
 
-  if (!authorization || authorization !== `Bearer ${secret}`) {
+  if (!hasValidSecretKey(request) && !hasValidPassword(request)) {
     return apiJson({ error: "Access Denied" }, 403)
   }
 

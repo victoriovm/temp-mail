@@ -1,4 +1,5 @@
 import { isValidAdminToken } from "@/lib/admin-auth"
+import { guardPassword } from "@/lib/api-auth"
 import { adminJson, adminNotFound } from "@/lib/admin-response"
 import { listAllMessages } from "@/lib/mail-store"
 import { toSummary } from "@/lib/mail-types"
@@ -10,7 +11,12 @@ type RouteContext = {
   params: Promise<{ token: string }>
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
+  const unauthorized = guardPassword(request, () =>
+    adminJson({ error: "Senha inválida ou ausente.", required: true }, 401),
+  )
+  if (unauthorized) return unauthorized
+
   const { token } = await context.params
   if (!isValidAdminToken(token)) return adminNotFound()
 

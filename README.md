@@ -20,6 +20,10 @@ Acesse `http://localhost:3000`.
 # Protege o recebimento e libera o painel em /SEU_SECRET_KEY
 SECRET_KEY=sua-chave-segura
 
+# Opcional. Se definida, o frontend pede a senha e todas as rotas /api
+# exigem o header Authorization: Bearer SENHA.
+PASSWORD=minha-senha
+
 # Opcional em desenvolvimento
 REDIS_SERVER=redis://localhost:6379
 
@@ -29,6 +33,15 @@ NEXT_PUBLIC_MAIL_DOMAINS=example.com,example.net
 
 Sem `REDIS_SERVER`, as mensagens ficam apenas na memória e são perdidas ao
 reiniciar o servidor.
+
+Sem `PASSWORD`, o acesso fica aberto: nenhuma rota exige autenticação. Com
+`PASSWORD` definida, o frontend mostra um popup pedindo a senha, guarda o valor
+no `localStorage` do navegador (para não pedir de novo) e envia
+`Authorization: Bearer SENHA` em todas as chamadas de `/api`. Uma resposta 401
+limpa a senha salva e o popup volta a aparecer.
+
+O `POST /api/receive` aceita tanto a `PASSWORD` quanto a `SECRET_KEY`, então o
+Worker continua funcionando sem alterações.
 
 ## ☁️ Cloudflare Email Worker
 
@@ -64,6 +77,10 @@ Worker.
 
 ## 🔌 API
 
+Com `PASSWORD` definida, todas as rotas exigem o header
+`Authorization: Bearer SENHA`. Sem `PASSWORD`, os exemplos abaixo funcionam sem
+o header (exceto `/api/receive`, que sempre exige credencial).
+
 ### 📥 Receber e-mail
 
 ```http
@@ -80,6 +97,7 @@ antigo continua compatível.
 
 ```http
 POST /api/list
+Authorization: Bearer SENHA
 Content-Type: application/json
 
 { "email": "caixa@example.com" }
@@ -89,15 +107,27 @@ Content-Type: application/json
 
 ```http
 POST /api/read
+Authorization: Bearer SENHA
 Content-Type: application/json
 
 { "email": "caixa@example.com", "id": "ID_DA_MENSAGEM" }
 ```
 
+### 🔑 Validar senha
+
+```http
+POST /api/auth
+Authorization: Bearer SENHA
+```
+
+Responde `200` quando a senha confere e `401` quando está ausente ou incorreta.
+É a rota usada pelo popup do frontend.
+
 ### 🌐 Listar domínios
 
 ```http
 GET /api/domains
+Authorization: Bearer SENHA
 ```
 
 ```json
@@ -111,6 +141,9 @@ Use a mesma `SECRET_KEY` configurada na API:
 ```text
 https://SEU_DOMINIO/SEU_SECRET_KEY
 ```
+
+Se `PASSWORD` estiver definida, o painel também pede a senha antes de exibir as
+mensagens.
 
 ## 📦 Produção
 

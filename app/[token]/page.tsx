@@ -2,7 +2,9 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { AdminMailApp } from "@/components/admin-mail-app"
+import { PasswordGate } from "@/components/password-gate"
 import { isValidAdminToken } from "@/lib/admin-auth"
+import { isPasswordRequired } from "@/lib/api-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -25,5 +27,9 @@ export default async function AdminPage({
   const { token } = await params
   if (!isValidAdminToken(token)) notFound()
 
-  return <AdminMailApp token={token} />
+  return (
+    <PasswordGate passwordRequired={isPasswordRequired()}>
+      <AdminMailApp token={token} />
+    </PasswordGate>
+  )
 }

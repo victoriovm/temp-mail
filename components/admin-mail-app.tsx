@@ -17,10 +17,8 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import {
-  formatReceivedTime,
-  haveSameMessageSummaries,
-} from "@/lib/mail-display"
+import { apiFetch } from "@/lib/api-client"
+import { formatReceivedTime, haveSameMessageSummaries } from "@/lib/mail-display"
 import type {
   MailContent,
   MessageSummary,
@@ -105,7 +103,7 @@ export function AdminMailApp({ token }: { token: string }) {
       if (!silent) setLoadingInbox(true)
 
       try {
-        const response = await fetch(`/api/admin/${encodedToken}/list`, {
+        const response = await apiFetch(`/api/admin/${encodedToken}/list`, {
           cache: "no-store",
           signal: controller.signal,
         })
@@ -170,7 +168,7 @@ export function AdminMailApp({ token }: { token: string }) {
     setLoadingMessage(true)
 
     try {
-      const response = await fetch(`/api/admin/${encodedToken}/read`, {
+      const response = await apiFetch(`/api/admin/${encodedToken}/read`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -47,6 +47,16 @@ function environmentBaseUrl() {
     return environment?.TEMPMAIL_BASE_URL || environment?.TEMP_MAIL_BASE_URL
 }
 
+function environmentPassword() {
+    const environment = (
+        globalThis as typeof globalThis & {
+            process?: { env?: Record<string, string | undefined> }
+        }
+    ).process?.env
+
+    return environment?.TEMPMAIL_PASSWORD || environment?.TEMP_MAIL_PASSWORD
+}
+
 function normalizeBaseUrl(value: string | undefined) {
     const configuredValue = value?.trim() || environmentBaseUrl()?.trim()
 
@@ -88,13 +98,14 @@ function validatePollingInterval(value: number | undefined) {
 }
 
 function normalizePassword(value: string | undefined) {
-    if (value === undefined) return undefined
+    const configuredValue = value?.trim() || environmentPassword()?.trim()
+    if (configuredValue === undefined) return undefined
 
-    if (typeof value !== "string") {
+    if (typeof configuredValue !== "string") {
         throw new TempMailError("password must be a string.")
     }
 
-    const password = value.trim()
+    const password = configuredValue.trim()
 
     return password.length > 0 ? password : undefined
 }
